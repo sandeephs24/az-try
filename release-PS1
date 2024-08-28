@@ -1,0 +1,222 @@
+param
+(
+[parameter(Mandatory=$true)]  [string] $paramfilepath, 
+[parameter(Mandatory=$true)]  [string] $path,
+[parameter(Mandatory=$true)]  [string] $azurePassword,
+[parameter(Mandatory=$true)]  [string] $ResourceGroupName,
+[parameter(Mandatory=$true)]  [string] $azureAplicationId,
+[parameter(Mandatory=$true)]  [string] $azureTenantId,
+[parameter(Mandatory=$true)]  [string] $ADFName,
+[parameter(Mandatory=$true)]  [string] $SubscriptionName,
+#[parameter(Mandatory=$true)]  [string] $globalParametersFilePath,
+#[parameter(Mandatory=$true)]  [string] $DeployLinkedServices,
+
+[parameter(Mandatory=$false)]  [bool] $datasets = $true , 
+[parameter(Mandatory=$false)]  [bool] $pipelines = $true, 
+[parameter(Mandatory=$false)]  [bool] $linkedservices = $true,
+[parameter(Mandatory=$false)]  [bool] $Deploytriggers = $true,
+[parameter(Mandatory=$false)]  [bool] $Starttriggers = $true,
+[parameter(Mandatory=$false)]  [bool] $Stoptriggers = $true,
+[parameter(Mandatory=$false)]  [bool] $deletetriggers = $true,
+[parameter(Mandatory=$false)]  [bool] $DeployIR = $true
+
+)
+
+Write-Host "Deploy Linked Services : " $DeployLinkedServices
+$JSON = ConvertFrom-Json -InputObject(Gc $paramfilepath -Raw)
+
+$azurePassword1 = ConvertTo-SecureString $azurePassword -AsPlainText -Force
+Connect-AzAccount -ServicePrincipal -ApplicationId $azureAplicationId -Tenant $azureTenantId -CertificateThumbprint $azurePassword
+Set-AzContext -SubscriptionName $SubscriptionName
+
+
+#$psCred = New-Object System.Management.Automation.PSCredential($azureAplicationId , $azurePassword1)
+#Add-AzureRmAccount -Credential $psCred -TenantId $azureTenantId  -ServicePrincipal 
+
+
+if($DeployIR){
+foreach($IR in $JSON.DeployIR) 
+{
+$IRname = $IR.Name
+Write-Host "JSON File name:" $IRname
+$IRpath1 = (-join($path,"integrationRuntime/",$IRname))
+
+Write-Host "IR Name : " $IRname.Substring(0,($IRname.Length-5))
+Write-Host "IR Path : " $IRpath1
+
+Set-AzDataFactoryV2IntegrationRuntime -ResourceGroupName $ResourceGroupName -DataFactoryName $ADFName -Name $IRname `
+                                            -Description 'Self Hosted IR'
+
+Write-Host "IR :"    $trname.Substring(0,($trname.Length-5)) " Deployed successfully"
+}
+Write-Host "IR deployment completed successfully"
+}
+
+if($linkedservices){
+foreach($ls in $JSON.Linkedservices) 
+        {
+        $lsname = $ls.Name
+        Write-Host "JSON File name:" $lsname
+        $linkedServicespath1 = (-join($path,"LinkedService/",$lsname))
+
+        Write-Host "Deployment linkedServicespath1 file: " $linkedServicespath1
+        Set-AzDataFactoryV2LinkedService -ResourceGroupName $ResourceGroupName -DataFactoryName $ADFName -Name $lsname.Substring(0,($lsname.Length-5)) -File $linkedServicespath1 -force | Format-List #$datasetpath | Format-List
+
+        Write-Host "Name : " $lsname.Substring(0,($lsname.Length-5))
+
+        Write-Host "File Path :" $linkedServicespath1
+
+        Write-Host "linked service :"    $lsname " deployed successfully"
+        }
+    Write-Host "linked service deployment completed successfully"
+    }
+    
+if($datasets){
+foreach($ds in $JSON.Datasets) 
+{
+$dsname = $ds.Name
+Write-Host "JSON File name:" $dsname
+$datasetpath1 = (-join($path,"Dataset/",$dsname))
+$datasetname = $dsname.Substring(0,($dsname.Length-5))
+$datasetpath = (-join($ADFName,"/",$datasetname))
+$datasetcontent = Get-Content $datasetpath1 | ConvertFrom-Json
+
+
+Write-Host "Deployment datasetpath1 file: " $datasetpath1
+Write-Host "Name : " $dsname.Substring(0,($dsname.Length-5))
+Write-Host "File Path :" $datasetpath1
+Write-Host "ADFPath : "$datasetpath
+
+#Set-AzDataFactoryV2Dataset -ResourceGroupName $ResourceGroupName -DataFactoryName $ADFName -Name $dsname.Substring(0,($dsname.Length-5)) -DefinitionFile $datasetpath1.ToString() -force | Format-List #$datasetpath | Format-List
+New-AzResource -ResourceType "Microsoft.DataFactory/factories/datasets" -ResourceGroupName $ResourceGroupName  -Name $datasetpath -ApiVersion "2018-06-01" -Properties $datasetcontent -Force -IsFullObject
+Write-Host "Datasets :"    $dsname.Substring(0,($dsname.Length-5)) " deployed successfully"
+}
+Write-Host "datasets deployment completed successfully"
+}
+
+if($pipelines){
+foreach($pl in $JSON.Pipelines) 
+{
+$plname = $pl.Name
+Write-Host "JSON File name:" $plname
+$pipelinespath1 = (-join($path,"Pipeline/",$plname))
+$pipelinename = $plname.Substring(0,($plname.Length-5))
+$pipelinepath = (-join($ADFName,"/",$pipelinename))
+
+Write-Host "Deployment pipelinespath1 file: " $pipelinespath1
+Write-Host "Name : " $plname.Substring(0,($plname.Length-5))
+Write-Host "File Path :" $pipelinespath1
+Write-Host "ADFPath : "$pipelinepath
+$pipelinecontent = Get-Content $pipelinespath1 | ConvertFrom-Json
+
+#Set-AzDataFactoryV2Pipeline -ResourceGroupName $ResourceGroupName -Name $dsname.Substring(0,($dsname.Length-5)) -DataFactoryName $ADFName -File $pipelinespath1 -force | Format-List #$datasetpath | Format-List
+New-AzResource -ResourceType "Microsoft.DataFactory/factories/pipelines" -ResourceGroupName $ResourceGroupName  -Name $pipelinepath -ApiVersion "2018-06-01" -Properties $pipelinecontent -Force -IsFullObject
+Write-Host "Pipelines :"    $plname.Substring(0,($plname.Length-5)) " deployed successfully"
+}
+Write-Host "pipelines deployment completed successfully"
+}
+
+if($StopTriggers){
+foreach($tr in $JSON.Stoptriggers) 
+{
+Write-Host "JSON File name:" 
+$trname = $tr.Name
+Write-Host "JSON File name:" $trname
+$triggerpath1 = (-join($path,"trigger/",$trname))
+
+Write-Host "Trigger Name : " $trname.Substring(0,($trname.Length-5))
+
+
+Stop-AzDataFactoryV2Trigger -ResourceGroupName $ResourceGroupName -DataFactoryName $ADFName -TriggerName $trname.Substring(0,($trname.Length-5)) -Force
+
+Write-Host "trigger :"    $trname.Substring(0,($trname.Length-5)) " Stopped successfully"
+}
+Write-Host "triggers Stop completed successfully"
+}
+
+if($DeployTriggers){
+foreach($tr in $JSON.DeployTriggers) 
+{
+$trname = $tr.Name
+Write-Host "JSON File name:" $trname
+$triggerpath1 = (-join($path,"trigger/",$trname))
+
+Write-Host "Deployment triggerspath1 file: " $triggerpath1
+Write-Host "Name : " $trname.Substring(0,($trname.Length-5))
+Write-Host "File Path :" $triggerpath1
+
+Write-Host "Deployment of trigger starts now ..."
+#Set-AzDataFactoryV2Pipeline -ResourceGroupName $ResourceGroupName -Name $dsname.Substring(0,($dsname.Length-5)) -DataFactoryName $ADFName -File $pipelinespath1 -force | Format-List #$datasetpath | Format-List
+#Stop-AzDataFactoryV2Trigger -ResourceGroupName $ResourceGroupName -DataFactoryName $ADFName -TriggerName $trname.Substring(0,($trname.Length-5)) -Force
+Set-AzDataFactoryV2Trigger -ResourceGroupName $ResourceGroupName -DataFactoryName $ADFName -Name $trname.Substring(0,($trname.Length-5)) -DefinitionFile $triggerpath1 -force | Format-List
+
+Write-Host "Deployment of trigger Ends now ..."
+
+Write-Host "trigger :"    $trname.Substring(0,($trname.Length-5)) " deployed successfully"
+
+#Set-AzureRmDataFactoryV2Trigger -ResourceGroupName $ResourceGroupName -DataFactoryName $ADFName -Name $trname.Substring(0,($trname.Length-5)) -DefinitionFile $triggerpath1
+
+}
+Write-Host "triggers deployment completed successfully"
+}
+
+if($StartTriggers){
+foreach($tr in $JSON.Starttriggers) 
+{
+$trname = $tr.Name
+Write-Host "JSON File name:" $trname
+$triggerpath1 = (-join($path,"trigger/",$trname))
+
+Write-Host "Trigger Name : " $trname.Substring(0,($trname.Length-5))
+
+
+Start-AzDataFactoryV2Trigger -ResourceGroupName $ResourceGroupName -DataFactoryName $ADFName -TriggerName $trname.Substring(0,($trname.Length-5)) -Force
+
+
+Write-Host "trigger :"    $trname.Substring(0,($trname.Length-5)) " Started successfully"
+}
+Write-Host "triggers Start completed successfully"
+}
+
+if($deleteTriggers){
+foreach($tr in $JSON.deletetriggers) 
+{
+$trname = $tr.Name
+Write-Host "JSON File name:" $trname
+$triggerpath1 = (-join($path,"trigger/",$trname))
+
+Write-Host "Trigger Name : " $trname.Substring(0,($trname.Length-5))
+
+Stop-AzDataFactoryV2Trigger -ResourceGroupName $ResourceGroupName -DataFactoryName $ADFName -TriggerName $trname.Substring(0,($trname.Length-5)) -Force
+Remove-AzDataFactoryV2Trigger -ResourceGroupName $ResourceGroupName -DataFactoryName $ADFName -TriggerName $trname.Substring(0,($trname.Length-5)) -Force
+
+Write-Host "trigger :"    $trname.Substring(0,($trname.Length-5)) " Started successfully"
+}
+Write-Host "triggers Start completed successfully"
+}
+
+##################################################################
+#Import-Module Az.DataFactory
+#
+#$newGlobalParameters = New-Object 'system.collections.generic.dictionary[string,Microsoft.Azure.Management.DataFactory.Models.GlobalParameterSpecification]'
+#
+#Write-Host "Getting global parameters JSON from: " $globalParametersFilePath
+#$globalParametersJson = Get-Content $globalParametersFilePath
+#
+#Write-Host "Parsing JSON..."
+#$globalParametersObject = [Newtonsoft.Json.Linq.JObject]::Parse($globalParametersJson)
+#$params=$globalParametersObject["properties"]["globalParameters"]
+#foreach ($gp in $params.GetEnumerator()) {
+#    Write-Host "Adding global parameter:" $gp.Key
+#    $globalParameterValue = $gp.Value.ToObject([Microsoft.Azure.Management.DataFactory.Models.GlobalParameterSpecification])
+#    $newGlobalParameters.Add($gp.Key, $globalParameterValue)
+#}
+#
+#$dataFactory = Get-AzDataFactoryV2 -ResourceGroupName $ResourceGroupName -Name $ADFName
+#$dataFactory.GlobalParameters = $newGlobalParameters
+#
+#Write-Host "Updating" $newGlobalParameters.Count "global parameters."
+#
+#Set-AzDataFactoryV2 -InputObject $dataFactory -Force
+#
+#######################################################

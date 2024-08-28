@@ -1,0 +1,364 @@
+{
+	"name": "PL_GenericToADLS_Parameterized_CPData_SrcToLand_BigQuery",
+	"properties": {
+		"activities": [
+			{
+				"name": "GetCurrentHWMValue",
+				"description": "Get Current high watermark value from Source",
+				"type": "Lookup",
+				"dependsOn": [
+					{
+						"activity": "META_CREATED_DTTM",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "GoogleBigQuerySource",
+						"query": {
+							"value": "@if(or(or(equals(toLower(pipeline().parameters.item.config_src_load_type),'full'),equals(pipeline().parameters.item.config_inc_column_name, coalesce(null, null, null) )), equals(pipeline().parameters.item.config_inc_column_name, '')),\n\n\tif(or(equals(pipeline().parameters.item.config_source_dataset_mask, coalesce(null, null, null) ), equals(pipeline().parameters.item.config_source_dataset_mask, '')),\n\tCONCAT('SELECT NULL AS current_hwm_column_value FROM ', pipeline().parameters.item.config_source_schema, '.', pipeline().parameters.item.dataset),\n\tCONCAT('SELECT NULL AS current_hwm_column_value FROM ', pipeline().parameters.item.config_source_schema, '.', pipeline().parameters.item.config_source_dataset_mask))\n\t\n,\n\tif(and(and(equals(toLower(pipeline().parameters.item.config_src_load_type),'inc'),not(equals(pipeline().parameters.item.config_src_max_value_query,'' ) )),not(equals(pipeline().parameters.item.config_src_max_value_query,coalesce(null, null, null) ) )),\n\t\treplace(replace(pipeline().parameters.item.config_src_max_value_query, '##config_inc_column_name##', pipeline().parameters.item.config_inc_column_name), '##last_load_value##', concat('''',pipeline().parameters.item.last_load_value, ''''))\n\t,\n\t\tconcat(' SELECT\n\t\tCAST(max(', pipeline().parameters.item.config_inc_column_name, ') AS STRING FORMAT ''YYYY-MM-DD'')\n\t\tAS current_hwm_column_value\n\t\tfrom ', pipeline().parameters.item.config_source_schema, '.', pipeline().parameters.item.dataset)\n\t)\n)",
+							"type": "Expression"
+						}
+					},
+					"dataset": {
+						"referenceName": "DS_BigQuery_Parameterized",
+						"type": "DatasetReference",
+						"parameters": {
+							"DS_Project_ID": {
+								"value": "@pipeline().parameters.item.source_server",
+								"type": "Expression"
+							},
+							"DS_Client_ID": {
+								"value": "@pipeline().parameters.item.source_endpoint_base_url",
+								"type": "Expression"
+							},
+							"DS_Client_Secret": {
+								"value": "@pipeline().parameters.item.source_azure_kv_secret_name",
+								"type": "Expression"
+							},
+							"DS_Refresh_Token": {
+								"value": "@pipeline().parameters.item.source_database_name",
+								"type": "Expression"
+							}
+						}
+					}
+				}
+			},
+			{
+				"name": "FullCopyBigQueryToADLS - SRC-LAND",
+				"type": "Copy",
+				"dependsOn": [
+					{
+						"activity": "GetCurrentHWMValue",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "GoogleBigQuerySource",
+						"additionalColumns": [
+							{
+								"name": "META_CREATED_DTTM",
+								"value": {
+									"value": "@variables('META_CREATED_DTTM')",
+									"type": "Expression"
+								}
+							},
+							{
+								"name": "DELETE_IND",
+								"value": ""
+							},
+							{
+								"name": "META_QUALITY_CD",
+								"value": ""
+							},
+							{
+								"name": "META_ACTION_CD",
+								"value": ""
+							},
+							{
+								"name": "META_CREATOR_NM",
+								"value": {
+									"value": "@pipeline().Pipeline",
+									"type": "Expression"
+								}
+							},
+							{
+								"name": "META_CHANGED_DTTM",
+								"value": {
+									"value": "@variables('META_CREATED_DTTM')",
+									"type": "Expression"
+								}
+							},
+							{
+								"name": "META_CHANGED_BY_NM",
+								"value": {
+									"value": "@pipeline().Pipeline",
+									"type": "Expression"
+								}
+							},
+							{
+								"name": "RECORD_ENTRY_DTTM",
+								"value": {
+									"value": "@variables('META_CREATED_DTTM')",
+									"type": "Expression"
+								}
+							},
+							{
+								"name": "META_CHECKSUM_ID",
+								"value": ""
+							},
+							{
+								"name": "META_JSON_SOURCE_IDENTIFIER",
+								"value": ""
+							},
+							{
+								"name": "META_DUPLICATE_RECORD_IND",
+								"value": ""
+							},
+							{
+								"name": "META_LINEAGE_KEY_HASH",
+								"value": ""
+							},
+							{
+								"name": "META_LINEAGE_ROW_HASH",
+								"value": ""
+							},
+							{
+								"name": "VERSION_TYPE_KEY",
+								"value": "'O'"
+							},
+							{
+								"name": "VERSION_EFFECTIVE_DATE",
+								"value": ""
+							},
+							{
+								"name": "VERSION_TERMINATION_DATE",
+								"value": ""
+							},
+							{
+								"name": "ACTIVE_INDICATOR",
+								"value": ""
+							},
+							{
+								"name": "USER_KEY",
+								"value": ""
+							},
+							{
+								"name": "REPORT_DT",
+								"value": ""
+							},
+							{
+								"name": "DATA_PROVIDER_KEY",
+								"value": ""
+							},
+							{
+								"name": "DATA_PROVIDER_SERVICE_KEY",
+								"value": ""
+							},
+							{
+								"name": "DATASET_KEY",
+								"value": ""
+							},
+							{
+								"name": "INTELLIGENCE_SOURCE_TYPE_KEY",
+								"value": ""
+							},
+							{
+								"name": "INTELLIGENCE_SOURCE_TEXT",
+								"value": ""
+							},
+							{
+								"name": "INTELLIGENCE_SOURCE_URL",
+								"value": ""
+							},
+							{
+								"name": "INTELLIGENCE_SOURCE_IMAGE",
+								"value": ""
+							},
+							{
+								"name": "INTELLIGENCE_SOURCE_MIME_TYPE_KEY",
+								"value": ""
+							}
+						],
+						"query": {
+							"value": "@{if(equals(toLower(pipeline().parameters.item.config_src_load_type),'full'),\n    if(and(and(not(empty(string(pipeline().parameters.item.config_src_query_full))),not(equals(pipeline().parameters.item.config_src_query_full, coalesce(null,null,null)))), \n       equals(toLower(pipeline().parameters.item.config_src_load_type),'full')),\n\t\t\tpipeline().parameters.item.config_src_query_full\n\t\t,\n\t\t\tCONCAT('SELECT * FROM ', pipeline().parameters.item.config_source_schema,'.',pipeline().parameters.item.dataset)\n        )\n\t,string('')\n)}\n@{if(equals(toLower(pipeline().parameters.item.config_src_load_type),'inc')\n, if(and(not(empty(string(pipeline().parameters.item.config_day0_query))),equals(pipeline().parameters.item.last_load_value, coalesce(null, null, null))),\n     pipeline().parameters.item.config_day0_query\n,\n  if(and(not(empty(string(pipeline().parameters.item.config_src_query_inc))),not(equals(pipeline().parameters.item.config_src_query_inc, coalesce(null,null,null)))),\n     if(not(startsWith(toLower(pipeline().parameters.item.config_src_query_inc),'select')),CONCAT('SELECT * FROM ', pipeline().parameters.item.config_source_schema,'.',pipeline().parameters.item.dataset,' ',REPLACE(REPLACE(REPLACE(pipeline().parameters.item.config_src_query_inc, '##config_inc_column_name##', pipeline().parameters.item.config_inc_column_name), '##last_load_value##', concat('''',pipeline().parameters.item.last_load_value, '''')), '##src_current_inc_column_value##', concat('''', activity('GetCurrentHWMValue').output.firstRow.current_hwm_column_value, ''''))),\n\t \n     REPLACE(REPLACE(REPLACE(pipeline().parameters.item.config_src_query_inc, '##config_inc_column_name##', pipeline().parameters.item.config_inc_column_name), '##last_load_value##', concat('''',pipeline().parameters.item.last_load_value, '''')), '##src_current_inc_column_value##', concat('''', activity('GetCurrentHWMValue').output.firstRow.current_hwm_column_value, '''')))\n  , \n  if(and(and(and(not(equals(pipeline().parameters.item.config_inc_column_name, coalesce(null, null, null))), not(equals(pipeline().parameters.item.last_load_value, coalesce(null, null, null)))),not(empty(string(pipeline().parameters.item.last_load_value)))),not(empty(string(pipeline().parameters.item.config_inc_column_name)))),\n  concat('SELECT * FROM ', pipeline().parameters.item.config_source_schema,'.',pipeline().parameters.item.dataset,' WHERE ', pipeline().parameters.item.config_inc_column_name, ' > CAST(''',pipeline().parameters.item.last_load_value,''' AS DATE)\n\t\t\t\tAND ', pipeline().parameters.item.config_inc_column_name, ' <= CAST(''',activity('GetCurrentHWMValue').output.firstRow.current_hwm_column_value,''' AS DATE)')\n  ,\n  CONCAT('SELECT * FROM ', pipeline().parameters.item.config_source_schema,'.',pipeline().parameters.item.dataset)\n  ))\n)\n,string('')\n)}",
+							"type": "Expression"
+						}
+					},
+					"sink": {
+						"type": "AvroSink",
+						"storeSettings": {
+							"type": "AzureDataLakeStoreWriteSettings"
+						},
+						"formatSettings": {
+							"type": "AvroWriteSettings"
+						}
+					},
+					"enableStaging": false,
+					"translator": {
+						"type": "TabularTranslator",
+						"typeConversion": true,
+						"typeConversionSettings": {
+							"allowDataTruncation": true,
+							"treatBooleanAsNumber": false
+						}
+					}
+				},
+				"inputs": [
+					{
+						"referenceName": "DS_BigQuery_Parameterized",
+						"type": "DatasetReference",
+						"parameters": {
+							"DS_Project_ID": {
+								"value": "@pipeline().parameters.item.source_server",
+								"type": "Expression"
+							},
+							"DS_Client_ID": {
+								"value": "@pipeline().parameters.item.source_endpoint_base_url",
+								"type": "Expression"
+							},
+							"DS_Client_Secret": {
+								"value": "@pipeline().parameters.item.source_azure_kv_secret_name",
+								"type": "Expression"
+							},
+							"DS_Refresh_Token": {
+								"value": "@pipeline().parameters.item.source_database_name",
+								"type": "Expression"
+							}
+						}
+					}
+				],
+				"outputs": [
+					{
+						"referenceName": "DS_ADLS_AVRO_Parameterized",
+						"type": "DatasetReference",
+						"parameters": {
+							"DS_ADLSStore": {
+								"value": "@pipeline().parameters.item.config_adls_store",
+								"type": "Expression"
+							},
+							"DS_ADLS_Path": {
+								"value": "@if(and( not( equals(pipeline().parameters.item.config_adls_landing_path_override, coalesce(null, null, null)) ), not( empty(pipeline().parameters.item.config_adls_landing_path_override) ) ),\n    concat('RAW/', replace(replace(replace(replace(pipeline().parameters.item.config_adls_landing_path_override, \n    '##source_name##', toUpper(trim(pipeline().parameters.item.source_name))), \n    '##config_data_hub##', toUpper(trim(pipeline().parameters.item.config_data_hub))), \n    '##config_environment##', toUpper(trim(pipeline().parameters.item.config_environment))),\n    '##source_environment_type##', toUpper(trim(pipeline().parameters.item.source_environment_type))),\n    '/', \n    trim(pipeline().parameters.item.config_source_schema), \n    '.',\n     trim(pipeline().parameters.item.dataset))\n ,\n \n  concat('RAW/', replace(replace(replace(pipeline().parameters.item.config_adls_landing_path, '##config_environment##', toUpper(trim(pipeline().parameters.item.config_environment))), '##source_name##', toUpper(trim(pipeline().parameters.item.source_name))), '##source_data_category##', toUpper(trim(pipeline().parameters.item.source_data_category))), '/', trim(pipeline().parameters.item.config_source_schema), '.', trim(pipeline().parameters.item.dataset))\n )",
+								"type": "Expression"
+							},
+							"DS_AzureTenant": {
+								"value": "@pipeline().parameters.item.config_az_tenant_id",
+								"type": "Expression"
+							},
+							"DS_AzureSubscriptionID": {
+								"value": "@pipeline().parameters.item.config_az_subscription_id",
+								"type": "Expression"
+							},
+							"DS_ResourceGroup": {
+								"value": "@pipeline().parameters.item.config_az_resource_group",
+								"type": "Expression"
+							},
+							"DS_ADLS_ObjectName": {
+								"value": "@if(and( not( equals(pipeline().parameters.item.config_adls_landing_path_override, coalesce(null, null, null)) ), not( empty(pipeline().parameters.item.config_adls_landing_path_override) ) ),\n\t\t    concat(toUpper(trim(pipeline().parameters.item.source_name)), '_', toUpper(trim(pipeline().parameters.item.config_data_hub)), \n\t\t\t'_', toUpper(trim(pipeline().parameters.item.config_environment)), '_', \n\t\t\ttoUpper(trim(pipeline().parameters.item.source_environment_type)), '_', toUpper(trim(pipeline().parameters.item.config_source_schema)),'.',\n\t\t\ttoUpper(trim(pipeline().parameters.item.dataset)), '_',\n\t\t\treplace(replace(replace(split(variables('META_CREATED_DTTM'), '.')[0], '-', ''), ' ', ''), ':', ''), '.avro')\n\t\t,\n\t\t    \n\t\t    concat(pipeline().parameters.item.dataset, '_', replace(replace(replace(split(variables('META_CREATED_DTTM'), '.')[0], '-', ''), ' ', ''), ':', ''), '.avro')\n\t    )",
+								"type": "Expression"
+							}
+						}
+					}
+				]
+			},
+			{
+				"name": "META_CREATED_DTTM",
+				"type": "SetVariable",
+				"dependsOn": [],
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "META_CREATED_DTTM",
+					"value": {
+						"value": "@if( or(equals(pipeline().parameters.META_CREATED_DTTM, coalesce(null, null, null)), equals(trim(pipeline().parameters.META_CREATED_DTTM), '') ), formatDateTime(utcnow(),'yyyy-MM-dd HH:mm:ss.fffffff'), pipeline().parameters.META_CREATED_DTTM)",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "Execute Pipeline",
+				"type": "ExecutePipeline",
+				"dependsOn": [
+					{
+						"activity": "FullCopyBigQueryToADLS - SRC-LAND",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "PL_Common_StoredProcedure_Activity",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true,
+					"parameters": {
+						"cpout": {
+							"value": "@activity('FullCopyBigQueryToADLS - SRC-LAND').output",
+							"type": "Expression"
+						},
+						"META_CREATED_DTTM": {
+							"value": "@variables('META_CREATED_DTTM')",
+							"type": "Expression"
+						},
+						"item": {
+							"value": "@pipeline().parameters.item",
+							"type": "Expression"
+						},
+						"CurrentHWM": {
+							"value": "@activity('GetCurrentHWMValue').output?.firstRow?.current_hwm_column_value",
+							"type": "Expression"
+						},
+						"RunID": {
+							"value": "@pipeline().parameters.RunID",
+							"type": "Expression"
+						}
+					}
+				}
+			}
+		],
+		"parameters": {
+			"item": {
+				"type": "object"
+			},
+			"META_CREATED_DTTM": {
+				"type": "string"
+			},
+			"RunID": {
+				"type": "string"
+			}
+		},
+		"variables": {
+			"META_CREATED_DTTM": {
+				"type": "String"
+			}
+		},
+		"folder": {
+			"name": "Common_Pipeline"
+		},
+		"annotations": [],
+		"lastPublishTime": "2022-01-21T06:42:03Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

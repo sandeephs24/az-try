@@ -1,0 +1,36 @@
+{
+    "name": "LS_BigQuery_Parameterized",
+    "type": "Microsoft.DataFactory/factories/linkedservices",
+    "properties": {
+        "annotations": [],
+        "type": "GoogleBigQuery",
+        "typeProperties": {
+            "connectionProperties": {
+                "project": "@linkedService().LS_Project_ID",
+                "requestGoogleDriveScope": false,
+                "authenticationType": "ServiceAuthentication",
+                "enableHTAPI": 0,
+                "HTAPI_MinResultsSize": 1000000000,
+                "HTAPI_MinActivationRatio": 100,
+                "email": "@linkedService().LS_email",
+                "keyFilePath": "@linkedService().LS_KeyFilePath",
+                "useSystemTrustStore": false
+            }
+        },
+        "connectVia": {
+            "referenceName": "CDS-eur-SHIR",
+            "type": "IntegrationRuntimeReference"
+        },
+        "parameters": {
+            "LS_Project_ID": {
+                "type": "String"
+            },
+            "LS_email": {
+                "type": "String"
+            },
+            "LS_KeyFilePath": {
+                "type": "String"
+            }
+		}
+    }
+}

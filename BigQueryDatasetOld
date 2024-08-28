@@ -1,0 +1,48 @@
+{
+	"name": "DS_BigQuery_Parameterized",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "LS_BigQuery_Parameterized",
+			"type": "LinkedServiceReference",
+			"parameters": {
+				"LS_Project_ID": {
+					"value": "@dataset().DS_Project_ID",
+					"type": "Expression"
+				},
+				"LS_Client_ID": {
+					"value": "@dataset().DS_Client_ID",
+					"type": "Expression"
+				},
+				"LS_Client_Secret": {
+					"value": "@dataset().DS_Client_Secret",
+					"type": "Expression"
+				},
+				"LS_Refresh_Token": {
+					"value": "@dataset().DS_Refresh_Token",
+					"type": "Expression"
+				}
+			}
+		},
+		"parameters": {
+			"DS_Project_ID": {
+				"type": "string"
+			},
+			"DS_Client_ID": {
+				"type": "string"
+			},
+			"DS_Client_Secret": {
+				"type": "string"
+			},
+			"DS_Refresh_Token": {
+				"type": "string"
+			}
+		},
+		"annotations": [],
+		"type": "GoogleBigQueryObject",
+		"schema": [],
+		"typeProperties": {
+			"dataset": "SHELL_DW_GAR",
+			"table": "nmms_dipc_lmp_gar"
+		}
+	}
+}

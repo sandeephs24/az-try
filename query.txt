@@ -1,0 +1,56 @@
+select *, try_cast(last_load_value as date) wm_date
+--into [CP_Data].[watermark.stage1]
+from [CP_Data].[watermark] where try_cast(last_load_value as date) > '2022-06-20'
+
+select *, try_cast(last_load_value as date) wm_date
+into [CP_Data].[watermark.stage1]
+from [CP_Data].[watermark]
+
+update [CP_Data].[watermark.stage1]
+set wm_date = '2022-06-20' where wm_date > '2022-06-20'
+
+select case when last_load_value like '%T%' then '2022-06-20T00:00:00'
+            when last_load_value like '%__:__:__%' then '2022-06-20 00:00:00'
+            when last_load_value like '%-___-%' then '20-Jun-22' 
+            when last_load_value like '____-__-__' then '2022-06-20'
+            end as test, last_load_value, wm_date
+                           from [CP_Data].[watermark.stage1]
+        where wm_date = '2022-06-20'
+
+update [CP_Data].[watermark.stage1]
+set last_load_value = case when last_load_value like '%T%' then '2022-06-20T00:00:00'
+                           when last_load_value like '%__:__:__%' then '2022-06-20 00:00:00'
+                           when last_load_value like '%-___-%' then '20-Jun-22' 
+                           when last_load_value like '____-__-__' then '2022-06-20' end
+        where wm_date = '2022-06-20'
+        
+        
+
+
+    select * from [CP_Data].[watermark.stage1]
+        where last_load_value like '______________' --and created_date like '2022-03-14%' 
+
+        update [CP_Data].[watermark.stage1]
+        set last_load_value = '20220620000000'
+        where last_load_value like '______________' --and created_date like '2022-03-14%'
+
+
+--------------------------------------------------------------------------------------------------------------------
+update [CP_Data].[watermark]
+set [CP_Data].[watermark].last_load_value = bkp.last_load_value
+from (select * from [CP_Data].[watermark.stage1] )bkp where
+[CP_Data].[watermark].watermark_id = bkp.watermark_id
+
+select a.last_load_value, b.last_load_value, a.watermark_id, b.watermark_id, *  from 
+[CP_Data].[watermark.stage1] a, [CP_Data].[watermark_20220630] b
+where a.watermark_id = b.watermark_id and a.last_load_value != b.last_load_value and a.source_id = 24
+
+select distinct source_name, source_id from (
+select b.source_name, a.* from [CP_Data].[watermark] a
+inner join [CP_Data].[sources] b on a.source_id = b.source_id) aa
+
+select a.last_load_value, b.last_load_value
+--, a.watermark_id, b.watermark_id, *  
+from 
+[CP_Data].[watermark.stage1] a, [CP_Data].[watermark_20220630] b
+where a.watermark_id = b.watermark_id and a.last_load_value != b.last_load_value and a.source_id != 24

@@ -1,0 +1,43 @@
+{
+	"name": "LS_BigQuery_Parameterized",
+	"properties": {
+		"type": "GoogleBigQuery",
+		"annotations": [],
+		"parameters": {
+			"LS_Project_ID": {
+				"type": "String"
+			},
+			"LS_Client_ID": {
+				"type": "String"
+			},
+			"LS_Client_Secret": {
+				"type": "String"
+			},
+			"LS_Refresh_Token": {
+				"type": "String"
+			}
+		},
+		"typeProperties": {
+			"project": "@linkedService().LS_Project_ID",
+			"requestGoogleDriveScope": false,
+			"authenticationType": "UserAuthentication",
+			"clientId": "@linkedService().LS_Client_ID",
+			"clientSecret": {
+				"type": "AzureKeyVaultSecret",
+				"store": {
+					"referenceName": "Default Key Vault Service",
+					"type": "LinkedServiceReference"
+				},
+				"secretName": "@linkedService().LS_Client_Secret"
+			},
+			"refreshToken": {
+				"type": "AzureKeyVaultSecret",
+				"store": {
+					"referenceName": "Default Key Vault Service",
+					"type": "LinkedServiceReference"
+				},
+				"secretName": "@linkedService().LS_Refresh_Token"
+			}
+		}
+	}
+}
